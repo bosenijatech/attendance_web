@@ -1,28 +1,29 @@
-
-
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+
+import '../../bloc/bloc/employee/editemployeer_bloc.dart';
+import '../../bloc/bloc/employee/employee_bloc.dart';
+import '../../bloc/event/employee/editemployee_event.dart';
+import '../../bloc/event/employee/employee_event.dart';
+import '../../bloc/state/employee/editemployee_state.dart';
 import '../../constant/app_color.dart';
-import 'employeemaster.dart';
-
-
-
+import '../../model/employee/getallemployeemodel.dart';
+import '../../services/attendance_apiservice.dart';
+import '../../widgets/custom_dropdown.dart';
 
 class Editemployeescreen extends StatefulWidget {
-  final VoidCallback? onBack;
-  final bool isEdit;
-  final Employee? employee;
-  final Function(Employee)? onSave;
-  final Function(Employee)? onAdd;
+  final EmployeeBloc employeeBloc;
+  final EmployeeList employee;
+  final VoidCallback onBack;
 
   const Editemployeescreen({
     super.key,
-    this.onBack,
-    this.isEdit = false,
-    this.employee,
-    this.onAdd,
-    this.onSave,
+    required this.employee,
+    required this.onBack,
+    required AttendanceApiService apiService,
+    required Null Function() onEmployeeUpdated,
+    required this.employeeBloc,
   });
 
   @override
@@ -30,212 +31,221 @@ class Editemployeescreen extends StatefulWidget {
 }
 
 class _EditemployeescreenState extends State<Editemployeescreen> {
-  late TextEditingController employeeIdController;
-  late TextEditingController employeeNameController;
-
- 
-  String status = "Active";
-  String type = "Permanent";
+  late TextEditingController idController;
+  late TextEditingController nameController;
+  late String type;
+  late String status;
+  late EditEmployeeBloc _editEmployeeBloc;
 
   @override
   void initState() {
     super.initState();
-  employeeIdController = TextEditingController(
-      text: widget.employee != null
-          ? 'S${widget.employee!.id.toString().padLeft(4, '0')}'
-          : '',
+
+    idController = TextEditingController(
+      text: widget.employee.employeeid ?? '',
     );
-  employeeNameController = TextEditingController(text: widget.employee?.name ?? '');
-  
-   type = widget.employee?.type ?? 'Permanent';
-    status = widget.employee?.status ?? 'Active';
-    
+    nameController = TextEditingController(
+      text: widget.employee.employeename ?? '',
+    );
+    type = widget.employee.type ?? "Employee";
+
+    String normalizedStatus = (widget.employee.status ?? '')
+        .toLowerCase()
+        .trim();
+    status = (normalizedStatus == "active" || normalizedStatus == "inactive")
+        ? normalizedStatus[0].toUpperCase() + normalizedStatus.substring(1)
+        : "Active";
+
+    _editEmployeeBloc = EditEmployeeBloc(apiService: AttendanceApiService());
   }
 
   @override
   void dispose() {
-   employeeIdController.dispose();
-    employeeNameController.dispose();
-
-  
+    idController.dispose();
+    nameController.dispose();
+    _editEmployeeBloc.close();
     super.dispose();
-  }
-
-  void saveEmployee() {
-    if (employeeNameController.text.isEmpty 
-        
-      ) {
-      return;
-    }
-
-    final newEmployee = Employee(
-      id: widget.employee?.id ?? 0,
-      name:employeeNameController.text,
-  
-     
-      status: status, type: type,
-    );
-
-    if (widget.isEdit) {
-      widget.onSave?.call(newEmployee);
-    } else {
-      widget.onAdd?.call(newEmployee);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColor.primaryLight,
-      body: Center(
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.isEdit ? "Edit Employee Master" : "Add Employee Master",
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColor.primary,
+    return BlocProvider.value(
+      value: _editEmployeeBloc,
+      child: Scaffold(
+        backgroundColor: AppColor.primaryLight,
+        body: Center(
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Fields
-              Row(
-                children: [
-                  Expanded(
-                    child: buildTextField("Employee ID", employeeIdController, enabled: false),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: buildTextField("Employee Name",employeeNameController),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-           
-              // Type
-              DropdownButtonHideUnderline(
-                child: DropdownButton2<String>(
-                  isExpanded: true,
-                  value: type,
-                  items: const [
-                    DropdownMenuItem(value: "Permanent", child: Text("Permanent")),
-                    DropdownMenuItem(value: "Temporary", child: Text("Temporary")),
-                    DropdownMenuItem(value: "Contract", child: Text("Contract")),
-                  ],
-                  onChanged: (value) => setState(() => type = value!),
-                  buttonStyleData: const ButtonStyleData(
-                    height: 50,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.fromBorderSide(BorderSide(color: Colors.grey)),
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-        
-
-              // Status
-              DropdownButtonHideUnderline(
-                child: DropdownButton2<String>(
-                  isExpanded: true,
-                  value: status,
-                  items: const [
-                    DropdownMenuItem(value: "Active", child: Text("Active")),
-                    DropdownMenuItem(value: "Inactive", child: Text("Inactive")),
-                  ],
-                  onChanged: (value) => setState(() => status = value!),
-                  buttonStyleData: const ButtonStyleData(
-                    height: 50,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.fromBorderSide(BorderSide(color: Colors.grey)),
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColor.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+              ],
+            ),
+            child: BlocConsumer<EditEmployeeBloc, EditEmployeeState>(
+              listener: (context, state) {
+                if (state is EditEmployeeSuccess) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.message)));
+                  // ✅ Refresh Employee list
+                  widget.employeeBloc.add(FetchEmployeeEvent());
+                  widget.onBack();
+                } else if (state is EditEmployeeFailure) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.error)));
+                }
+              },
+              builder: (context, state) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Edit Employee",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColor.primary,
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
-                    onPressed: () {
-                      saveEmployee();
-                      widget.onBack?.call();
-                    },
-                    child: Text(widget.isEdit ? "Save" : "Add",style: TextStyle(color: AppColor.white),),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-               
-                      // side: const BorderSide(color: AppColor.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: idController,
+                            decoration: const InputDecoration(
+                              labelText: "Employee ID",
+                              border: OutlineInputBorder(),
+                            ),
+                            enabled: false,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: "Employee Name",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: widget.onBack,
-                    child: const Text("Cancel", style: TextStyle(color: AppColor.white)),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomDropdownWidget(
+                            valArr: const [
+                              "Permanent",
+                              "Temporary",
+                              "Contract",
+                            ],
+                            selectedItem: type,
+                            labelText: "Type",
+                            validator: (v) =>
+                                v == null ? "Please select a Type" : null,
+                            onChanged: (value) {
+                              setState(() => type = value);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomDropdownWidget(
+                            valArr: const ["Active", "Inactive"],
+                            selectedItem: status,
+                            labelText: "Status",
+                            validator: (v) =>
+                                v == null ? "Please select a status" : null,
+                            onChanged: (value) {
+                              setState(() => status = value);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColor.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: state is EditEmployeeLoading
+                              ? null
+                              : () {
+                                  _editEmployeeBloc.add(
+                                    SubmitEditEmployee(
+                                      id:
+                                          widget.employee.id ??
+                                          '0', // numeric DB ID
+                                      employeeId: idController.text,
+                                      employeeName: nameController.text,
+                                      type: type,
+                                      status: status,
+                                      employeeemail: '',
+                                    ),
+                                  );
+                                },
+                          child: state is EditEmployeeLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  "Update",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: widget.onBack,
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget buildTextField(
-    String label,
-    TextEditingController controller, {
-    bool enabled = true,
-  }) {
-    return TextField(
-      enabled: enabled,
-      cursorColor: AppColor.primary,
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColor.primary),
-        ),
-        floatingLabelStyle: const TextStyle(color: AppColor.primary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 }
-

@@ -1,335 +1,298 @@
 
 
-import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
-import '../../constant/app_color.dart';
-
-// Models
-import '../../model/supervisor/addsupervisormodel.dart';
-import '../../model/supervisor/getallsupervisormodel.dart';
-
-// Service
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../bloc/bloc/supervisor/editsupervisor_bloc.dart';
+import '../../bloc/bloc/supervisor/supervisor_bloc.dart';
+import '../../bloc/event/supervisor/editsupervisor_event.dart';
+import '../../bloc/event/supervisor/supervisor_event.dart';
+import '../../bloc/state/supervisor/editsupervisor_state.dart';
+import '../../constant/utils.dart';
 import '../../services/attendance_apiservice.dart';
+import '../../model/supervisor/getallsupervisormodel.dart';
+import '../../constant/app_color.dart';
+import '../../widgets/custom_dropdown.dart';
 
-class Editsupervisorscreen extends StatefulWidget {
-  final VoidCallback? onBack;
-  final bool isEdit;
-  final Supervisorlist? supervisor;
-  final Function(Supervisorlist)? onSave;
-  final Function(Supervisorlist)? onAdd;
-  final List<Supervisorlist>?
-  allSupervisors; // Pass all supervisors for next ID
+class EditSupervisorScreen extends StatefulWidget {
+  final SupervisorBloc supervisorBloc;
+  final Supervisorlist supervisor;
+  final VoidCallback onBack;
 
-  const Editsupervisorscreen({
+  const EditSupervisorScreen({
     super.key,
-    this.onBack,
-    this.isEdit = false,
-    this.supervisor,
-    this.onAdd,
-    this.onSave,
-    this.allSupervisors,
+    required this.supervisor,
+    required this.onBack,
+    required AttendanceApiService apiService,
+    required Null Function() onSupervisorUpdated,
+    required this.supervisorBloc,
   });
 
   @override
-  State<Editsupervisorscreen> createState() => _EditsupervisorscreenState();
+  State<EditSupervisorScreen> createState() => _EditSupervisorScreenState();
 }
 
-class _EditsupervisorscreenState extends State<Editsupervisorscreen> {
-  final AttendanceApiService apiService = AttendanceApiService();
-  bool isLoading = false;
-
-  late TextEditingController supervisorIdController;
-  late TextEditingController supervisorNameController;
-
-  String status = "Active";
-  String type = "Supervisor";
+class _EditSupervisorScreenState extends State<EditSupervisorScreen> {
+  late TextEditingController idController;
+  late TextEditingController nameController;
+  late TextEditingController usernameController;
+  late TextEditingController passwordController;
+  late String type;
+  late String status;
+  late EditSupervisorBloc _editSupervisorBloc;
+ final role =  SharedPrefs.getUserRole();
+  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
 
-    // Calculate next supervisor ID
-    String nextId = widget.isEdit
-        ? (widget.supervisor?.supervisorid ?? 'S001')
-        : generateNextId(widget.allSupervisors ?? []);
+    idController =
+        TextEditingController(text: widget.supervisor.supervisorid ?? '');
+    nameController =
+        TextEditingController(text: widget.supervisor.supervisorname ?? '');
+    usernameController =
+        TextEditingController(text: widget.supervisor.username ?? '');
+    passwordController =
+        TextEditingController(text: widget.supervisor.password ?? '');
+    type = widget.supervisor.type ?? "Supervisor";
 
-    supervisorIdController = TextEditingController(text: nextId);
-    supervisorNameController = TextEditingController(
-      text: widget.supervisor?.supervisorname ?? '',
-    );
-    type = widget.supervisor?.type ?? 'Supervisor';
-    status = widget.supervisor?.status ?? 'Active';
+    String normalizedStatus =
+        (widget.supervisor.status ?? '').toLowerCase().trim();
+    status = (normalizedStatus == "active" || normalizedStatus == "inactive")
+        ? normalizedStatus[0].toUpperCase() + normalizedStatus.substring(1)
+        : "Active";
+
+    _editSupervisorBloc = EditSupervisorBloc(apiService: AttendanceApiService());
   }
 
   @override
   void dispose() {
-    supervisorIdController.dispose();
-    supervisorNameController.dispose();
+    idController.dispose();
+    nameController.dispose();
+    usernameController.dispose();
+    passwordController.dispose();
+    _editSupervisorBloc.close();
     super.dispose();
   }
 
-  // Generate next ID from list
-  String generateNextId(List<Supervisorlist> supervisors) {
-    if (supervisors.isEmpty) return 'S001';
-
-    supervisors.sort((a, b) {
-      final aNum = int.parse(a.supervisorid!.substring(1));
-      final bNum = int.parse(b.supervisorid!.substring(1));
-      return aNum.compareTo(bNum);
-    });
-
-    final lastId = supervisors.last.supervisorid!;
-    final nextNum = int.parse(lastId.substring(1)) + 1;
-    return 'S ${nextNum.toString().padLeft(3, '0')}';
-  }
-
-Future<void> AddSupervisor({
-  required String supervisorId,
-  required String supervisorName,
-  required String type,
-  required String status,
-}) async {
-  setState(() => isLoading = true);
-
-  final postData = {
-    "supervisorid": supervisorId,
-    "supervisorname": supervisorName,
-    "type": type,
-    "status": status,
-  };
-
-  print("📤 Sending Add Supervisor Request: $postData");
-
-  try {
-    final response = await apiService.AddSupervisor(postData);
-    final Map<String, dynamic> responseData = jsonDecode(response);
-    final model = AddsupervisorsModel.fromJson(responseData);
-
-    if (model.status) {
-      final addedSupervisor = Supervisorlist(
-        id: model.data?.id ?? '',
-        supervisorid: supervisorIdController.text.trim(),
-        supervisorname: supervisorNameController.text.trim(),
-        type: type,
-        status: status,
-      );
-print(addedSupervisor);
-      widget.onAdd?.call(addedSupervisor);
-      widget.onBack?.call();
-      print("✅ Supervisor added successfully: $addedSupervisor");
-    } else {
-      print("❌ Failed to add supervisor: ${model.message}");
-    }
-  } catch (e) {
-    print("❌ Error adding supervisor: $e");
-  } finally {
-    setState(() => isLoading = false);
-  }
-}
-
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColor.primaryLight,
-      body: Center(
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.isEdit
-                    ? "Edit Supervisor Master"
-                    : "Add Supervisor Master",
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColor.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Fields
-              Row(
-                children: [
-                  Expanded(
-                    child: buildTextField(
-                      "Supervisor ID",
-                      supervisorIdController,
-                      enabled: false,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: buildTextField(
-                      "Supervisor Name",
-                      supervisorNameController,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Type
-              DropdownButtonHideUnderline(
-                child: DropdownButton2<String>(
-                  isExpanded: true,
-                  value: type,
-                  items: const [
-                    DropdownMenuItem(
-                      value: "Supervisor",
-                      child: Text("Supervisor"),
-                    ),
-                    DropdownMenuItem(
-                      value: "Employee",
-                      child: Text("Employee"),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => type = value!),
-                  buttonStyleData: const ButtonStyleData(
-                    height: 50,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.fromBorderSide(
-                        BorderSide(color: Colors.grey),
-                      ),
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Status
-              DropdownButtonHideUnderline(
-                child: DropdownButton2<String>(
-                  isExpanded: true,
-                  value: status,
-                  items: const [
-                    DropdownMenuItem(value: "Active", child: Text("Active")),
-                    DropdownMenuItem(
-                      value: "Inactive",
-                      child: Text("Inactive"),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => status = value!),
-                  buttonStyleData: const ButtonStyleData(
-                    height: 50,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.fromBorderSide(
-                        BorderSide(color: Colors.grey),
-                      ),
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColor.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-              onPressed: () {
-  if (supervisorNameController.text.trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please enter supervisor name')),
-    );
-    return;
-  }
-
-  if (widget.isEdit) {
-    // Call your update function here (if implemented)
-  } else {
-    AddSupervisor(
-      supervisorId: supervisorIdController.text.trim(),
-      supervisorName: supervisorNameController.text.trim(),
-      type: type,
-      status: status,
-    );
-    
-  }
-},
-                    child: Text(
-                      widget.isEdit ? "Save" : "Add",
-                      style: const TextStyle(color: AppColor.white),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                    onPressed: widget.onBack,
-                    child: const Text(
-                      "Cancel",
-                      style: TextStyle(color: AppColor.white),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (isLoading) ...[
-                const SizedBox(height: 16),
-                const CircularProgressIndicator(color: AppColor.primary),
+    return BlocProvider.value(
+      value: _editSupervisorBloc,
+      child: Scaffold(
+        backgroundColor: AppColor.primaryLight,
+        body: Center(
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 12,
+                    offset: Offset(0, 6))
               ],
-            ],
+            ),
+            child: BlocConsumer<EditSupervisorBloc, EditSupervisorState>(
+              listener: (context, state) {
+                if (state is EditSupervisorSuccess) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(state.message)));
+
+                  // ✅ Refresh supervisor list
+                  widget.supervisorBloc.add(FetchSupervisorsEvent());
+                  widget.onBack();
+                } else if (state is EditSupervisorFailure) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(state.error)));
+                }
+              },
+              builder: (context, state) {
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Edit Supervisor",
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColor.primary),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // 🔹 Row 1 - ID + Name
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: idController,
+                              decoration: const InputDecoration(
+                                labelText: "Supervisor ID",
+                                border: OutlineInputBorder(),
+                                   enabled: false,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: nameController,
+                              decoration: const InputDecoration(
+                                labelText: "Supervisor Name",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 🔹 Row 2 - Username + Password (with eye)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: usernameController,
+                              decoration: const InputDecoration(
+                                labelText: "Username",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: passwordController,
+                              obscureText: _obscurePassword,
+                              decoration: InputDecoration(
+                                labelText: "Password",
+                                border: const OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 🔹 Row 3 - Type + Status
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomDropdownWidget(
+                              valArr: const ["Supervisor", "Admin"],
+                              selectedItem: type,
+                              labelText: "Type",
+                              validator: (v) =>
+                                  v == null ? "Please select a type" : null,
+                              onChanged: (value) {
+                                setState(() {
+                                  type = value ?? "Supervisor";
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: CustomDropdownWidget(
+                              valArr: const ["Active", "Inactive"],
+                              selectedItem: status,
+                              labelText: "Status",
+                              validator: (v) =>
+                                  v == null ? "Please select a status" : null,
+                              onChanged: (value) {
+                                setState(() {
+                                  status = value ?? "Active";
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // 🔹 Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColor.primary,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
+                            ),
+                          onPressed: state is EditSupervisorLoading
+    ? null
+    : () async {
+        
+
+
+        // ✅ If admin, allow update
+        _editSupervisorBloc.add(
+          SubmitEditSupervisor(
+            id: widget.supervisor.id ?? '0',
+            supervisorId: idController.text,
+            supervisorName: nameController.text,
+            type: type,
+            status: status,
+            username: usernameController.text,
+            password: passwordController.text,
+          ),
+        );
+      },
+
+                            child: state is EditSupervisorLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text("Update",
+                                    style: TextStyle(color: Colors.white)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
+                            ),
+                            onPressed: widget.onBack,
+                            child: const Text("Cancel",
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget buildTextField(
-    String label,
-    TextEditingController controller, {
-    bool enabled = true,
-  }) {
-    return TextField(
-      enabled: enabled,
-      cursorColor: AppColor.primary,
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColor.primary),
-        ),
-        floatingLabelStyle: const TextStyle(color: AppColor.primary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

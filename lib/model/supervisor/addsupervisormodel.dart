@@ -1,71 +1,34 @@
 
 
 
-// To parse this JSON data, do
-//
-//     final addsupervisorsModel = addsupervisorsModelFromJson(jsonString);
-
 import 'dart:convert';
+import 'getallsupervisormodel.dart'; // import your Supervisorlist model
 
-AddsupervisorsModel addsupervisorsModelFromJson(String str) => AddsupervisorsModel.fromJson(json.decode(str));
+AddsupervisorscreenModel addsupervisorscreenModelFromJson(String str) =>
+    AddsupervisorscreenModel.fromJson(json.decode(str));
 
-String addsupervisorsModelToJson(AddsupervisorsModel data) => json.encode(data.toJson());
-class AddsupervisorsModel {
-  bool status;
-  String message;
-  AddSupervisor? data; // nullable because sometimes data might be null
+String addsupervisorscreenModelToJson(AddsupervisorscreenModel data) =>
+    json.encode(data.toJson());
 
-  AddsupervisorsModel({
-    required this.status,
-    required this.message,
-    this.data,
-  });
+class AddsupervisorscreenModel {
+  bool? status;
+  String? message;
+  Supervisorlist? data; // ✅ Newly added supervisor
 
-  factory AddsupervisorsModel.fromJson(Map<String, dynamic> json) => AddsupervisorsModel(
-        status: json["status"] ?? false,
-        message: json["message"] ?? "",
-        data: json["data"] != null ? AddSupervisor.fromJson(json["data"]) : null,
+  AddsupervisorscreenModel({this.status, this.message, this.data});
+
+  factory AddsupervisorscreenModel.fromJson(Map<String, dynamic> json) =>
+      AddsupervisorscreenModel(
+        status: json["status"],
+        message: json["message"],
+        data: json["data"] != null
+            ? Supervisorlist.fromJson(json["data"])
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
         "status": status,
         "message": message,
         "data": data?.toJson(),
-      };
-}
-
-class AddSupervisor {
-  String supervisorid;
-  String supervisorname;
-  String type;
-  String status;
-  String id;
-  int v;
-
-  AddSupervisor({
-    required this.supervisorid,
-    required this.supervisorname,
-    required this.type,
-    required this.status,
-    required this.id,
-    required this.v,
-  });
-
-  factory AddSupervisor.fromJson(Map<String, dynamic> json) => AddSupervisor(
-        supervisorid: json["supervisorid"] ?? "", // default empty string
-        supervisorname: json["supervisorname"] ?? "",
-        type: json["type"] ?? "",
-        status: json["status"] ?? "",
-        id: json["_id"] ?? "",
-        v: json["__v"] ?? 0,
-      );
-
-  Map<String, dynamic> toJson() => {
-        "supervisorid": supervisorid,
-        "supervisorname": supervisorname,
-        "type": type,
-        "status": status,
-        "_id": id,
-        "__v": v,
       };
 }
