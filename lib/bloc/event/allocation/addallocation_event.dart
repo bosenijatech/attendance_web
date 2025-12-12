@@ -15,6 +15,7 @@ class CreateAllocationEvent extends AddAllocationEvent {
   final String id;
  final String allocationid;
   final String supervisorname;
+  final String supervisorid;
   final String projectname;
   final String sitename;
   final String fromDate;
@@ -27,6 +28,8 @@ class CreateAllocationEvent extends AddAllocationEvent {
     required this.id,
     required this.allocationid,
     required this.supervisorname,
+    required this.supervisorid,
+
     required this.projectname,
     required this.sitename,
     required this.fromDate,
@@ -41,6 +44,7 @@ class CreateAllocationEvent extends AddAllocationEvent {
         id,
         allocationid,
         supervisorname,
+      supervisorid,
         projectname,
         sitename,
         fromDate,

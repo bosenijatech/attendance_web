@@ -52,7 +52,9 @@ class _AddAllocationScreenState extends State<AddAllocationScreen> {
   String status = "Active";
   bool _saved = false;
 
-  String? selectedSupervisor;
+  String? selectedSupervisorName;
+  String? selectedSupervisorId;
+
   int? selectedsyncstaus;
   String? selectedEmployee;
   String? selectedSite;
@@ -85,7 +87,7 @@ class _AddAllocationScreenState extends State<AddAllocationScreen> {
   // ✅ FIXED FUNCTION — includes employee name + id
   void _saveAllocation(BuildContext context) {
     if (_formKey.currentState!.validate()) {
-      if (selectedSupervisor == null ||
+      if (selectedSupervisorName == null ||
           selectedProject == null ||
           selectedSite == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,14 +127,16 @@ class _AddAllocationScreenState extends State<AddAllocationScreen> {
       context.read<AddAllocationBloc>().add(
         CreateAllocationEvent(
           id: '',
-          supervisorname: selectedSupervisor!,
+          
+        supervisorid: '',
+          supervisorname: selectedSupervisorName!,
           projectname: selectedProject!,
           sitename: selectedSite!,
           fromDate: formattedFrom,
           toDate: formattedTo,
           status: status,
           employee: employeeList, 
-           syncstaus: 0, allocationid: _idController.text.trim(),
+           syncstaus: 0, allocationid: _idController.text.trim(), 
         
         ),
       );
@@ -373,37 +377,71 @@ class _AddAllocationScreenState extends State<AddAllocationScreen> {
                       const SizedBox(height: 16),
 
                       // 🔹 Supervisor Dropdown
+                      // BlocBuilder<SupervisorBloc, SupervisorState>(
+                      //   builder: (context, state) {
+                      //     if (state is SupervisorLoading) {
+                      //       return const Center(
+                      //         child: CircularProgressIndicator(),
+                      //       );
+                      //     } else if (state is SupervisorLoaded) {
+                      //       final supervisorList = state.supervisors;
+                      //       return CustomDropdownWidget(
+                      //         labelText: "Supervisor",
+                      //         valArr: supervisorList,
+                      //         selectedItem: selectedSupervisorName == null
+                      //             ? null
+                      //             : supervisorList.firstWhere(
+                      //                 (s) =>
+                      //                     s.supervisorname ==
+                      //                     selectedSupervisorName,
+                      //                 orElse: () => supervisorList.first,
+                      //               ),
+                      //         labelField: (s) => s.supervisorname ?? '',
+                      //         onChanged: (v) {
+                      //           setState(() {
+                      //             selectedSupervisorName = v.supervisorname;
+                                  
+                      //           });
+                      //         },
+                      //       );
+                      //     } else {
+                      //       return const SizedBox();
+                      //     }
+                      //   },
+                      // ),
+
                       BlocBuilder<SupervisorBloc, SupervisorState>(
-                        builder: (context, state) {
-                          if (state is SupervisorLoading) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          } else if (state is SupervisorLoaded) {
-                            final supervisorList = state.supervisors;
-                            return CustomDropdownWidget(
-                              labelText: "Supervisor",
-                              valArr: supervisorList,
-                              selectedItem: selectedSupervisor == null
-                                  ? null
-                                  : supervisorList.firstWhere(
-                                      (s) =>
-                                          s.supervisorname ==
-                                          selectedSupervisor,
-                                      orElse: () => supervisorList.first,
-                                    ),
-                              labelField: (s) => s.supervisorname ?? '',
-                              onChanged: (v) {
-                                setState(() {
-                                  selectedSupervisor = v.supervisorname;
-                                });
-                              },
-                            );
-                          } else {
-                            return const SizedBox();
-                          }
-                        },
-                      ),
+  builder: (context, state) {
+    if (state is SupervisorLoading) {
+      return const Center(child: CircularProgressIndicator());
+    } 
+    else if (state is SupervisorLoaded) {
+      final supervisorList = state.supervisors;
+
+      return CustomDropdownWidget(
+        labelText: "Supervisor",
+        valArr: supervisorList,
+        selectedItem: selectedSupervisorName == null
+            ? null
+            : supervisorList.firstWhere(
+                (s) => s.supervisorname == selectedSupervisorName,
+                orElse: () => supervisorList.first,
+              ),
+        labelField: (s) => s.supervisorname ?? '',
+        onChanged: (v) {
+          setState(() {
+            selectedSupervisorName = v.supervisorname;
+            selectedSupervisorId = v.id; 
+             
+          });
+        },
+      );
+    } 
+    else {
+      return const SizedBox();
+    }
+  },
+),
 
                       const SizedBox(height: 16),
 

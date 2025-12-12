@@ -65,6 +65,7 @@ class AddAllocationBloc extends Bloc<AddAllocationEvent, AddAllocationState> {
         "id": event.id,
         "allocationid" : event.allocationid,
         "supervisorname": event.supervisorname,
+        "supervisorid": event.supervisorid,
         "employee": event.employee, // ✅ backend expects array
         "projectname": event.projectname,
         "sitename": event.sitename,

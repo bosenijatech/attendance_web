@@ -31,10 +31,7 @@ class AttendanceApiService {
     final userId = prefs.getInt('user_id');
 
     return {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Appplatform': 'Android',
-      'App-type': '$userId',
+      'Content-Type': 'application/json',  
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
@@ -77,39 +74,21 @@ class AttendanceApiService {
 
 
 
-  // Get all supervisors with token
-  // Future<GetallsupervisorsModel> getAllSupervisor() async {
-  //   try {
-  //     final url = Uri.parse('${liveApiPath}getallSupervisors');
-  //     final headers = await _getHeaders();
-  //     final response = await http.get(url, headers: headers);
-
-  //     if (response.statusCode == 200) {
-  //       final jsonMap = jsonDecode(response.body);
-  //       return GetallsupervisorsModel.fromJson(jsonMap);
-  //     } else {
-  //       throw Exception('Failed to load supervisors');
-  //     }
-  //   } catch (e) {
-  //     throw Exception('Error: $e');
-  //   }
-  // }
-
+  
   Future<GetallsupervisorsModel> getAllSupervisor() async {
   try {
     final url = Uri.parse('${liveApiPath}getallSupervisors');
-    print('Request URL: $url'); // ✅ Print the URL
+   
 
     final headers = await _getHeaders();
-    print('Request Headers: $headers'); // ✅ Print headers
+   
 
     final response = await http.get(url, headers: headers);
-    print('Response Status Code: ${response.statusCode}'); // ✅ Print status code
-    print('Response Body: ${response.body}'); // ✅ Print response body
+   
 
     if (response.statusCode == 200) {
       final jsonMap = jsonDecode(response.body);
-      print('Decoded JSON: $jsonMap'); // ✅ Print decoded JSON
+  
       return GetallsupervisorsModel.fromJson(jsonMap);
     } else {
       throw Exception('Failed to load supervisors');
@@ -420,6 +399,8 @@ Future<AddemployeeModel> deleteEmployee(String id) async {
 
       if (response.statusCode == 200) {
         final jsonMap = jsonDecode(response.body);
+       print("DECODED JSON: $jsonMap");
+
         return GetallallocationModel.fromJson(jsonMap);
       } else {
         throw Exception('Failed to load Allocation');
