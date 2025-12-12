@@ -412,18 +412,19 @@ Future<AddemployeeModel> deleteEmployee(String id) async {
 
 
  // Add Allocation with token
-  Future<AddemployeeModel> addAllocation(Map<String, dynamic> postData) async {
+  Future<AddallocationModel> addAllocation(Map<String, dynamic> postData) async {
     final url = Uri.parse("${liveApiPath}addAllocation");
     final headers = await _getHeaders();
-
+  print("📦 Body: ${jsonEncode(postData)}");
     final response = await http.post(
       url,
       headers: headers,
       body: jsonEncode(postData),
     );
-
+  print("📥 Response Status: ${response.statusCode}");
+  print("📥 Response Body: ${response.body}");
     if (response.statusCode == 200) {
-      return AddemployeeModel.fromJson(jsonDecode(response.body));
+      return AddallocationModel.fromJson(jsonDecode(response.body));
     } else {
       throw Exception("Failed to add Allocation");
     }

@@ -128,7 +128,7 @@ class _AddAllocationScreenState extends State<AddAllocationScreen> {
         CreateAllocationEvent(
           id: '',
           
-        supervisorid: '',
+        supervisorid: selectedSupervisorId!,
           supervisorname: selectedSupervisorName!,
           projectname: selectedProject!,
           sitename: selectedSite!,
